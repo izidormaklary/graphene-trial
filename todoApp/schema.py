@@ -1,4 +1,5 @@
-import graphene
+
+from graphene import Field, List, ID, String, Boolean, Int, ObjectType, Schema, Mutation
 from graphene_django import DjangoObjectType, DjangoListField
 from .models import Todo
 
@@ -9,9 +10,10 @@ class TodoType(DjangoObjectType):
         fields = ('id', 'title', 'status', 'date_created')
 
 
-class Query(graphene.ObjectType):
-    todos = graphene.List(TodoType)
-    todo_by_id = graphene.Field(TodoType, pk=graphene.Int(required=True), description="Getting todo by id")
+class Query(ObjectType):
+    todos = List(TodoType, description="All todos")
+    todo_by_id = Field(TodoType, pk=Int(required=True), description="Getting todo by id")
+    todos_not_done = List(TodoType, description="Unfinished todos")
 
     def resolve_todos(root, info, **kwargs):
         return Todo.objects.all()
@@ -19,15 +21,18 @@ class Query(graphene.ObjectType):
     def resolve_todo_by_id(root, info, pk):
         return Todo.objects.get(id=pk)
 
+    def resolve_todos_not_done(root, info):
+        return Todo.objects.filter(status=False)
 
-class UpdateTodo(graphene.Mutation):
+
+class UpdateTodo(Mutation):
     class Arguments:
         # Mutation to update a todo
-        title = graphene.String(required=True)
-        id = graphene.ID()
-        status = graphene.Boolean()
+        title = String(required=True)
+        id = ID(required=True)
+        status = Boolean()
 
-    todo = graphene.Field(TodoType)
+    todo = Field(TodoType)
 
     @classmethod
     def mutate(cls, root, info, title, id, status):
@@ -39,14 +44,14 @@ class UpdateTodo(graphene.Mutation):
         return UpdateTodo(todo=todo)
 
 
-class CreateTodo(graphene.Mutation):
+class CreateTodo(Mutation):
     class Arguments:
         # Mutation to create a todo
-        title = graphene.String(required=True)
-        status = graphene.Boolean()
+        title = String(required=True)
+        status = Boolean()
 
     # Class attributes define the response of the mutation
-    todo = graphene.Field(TodoType)
+    todo = Field(TodoType)
 
     @classmethod
     def mutate(cls, root, info, title, status):
@@ -58,9 +63,9 @@ class CreateTodo(graphene.Mutation):
         return CreateTodo(todo=todo)
 
 
-class Mutation(graphene.ObjectType):
+class Mutation(ObjectType):
     update_todo = UpdateTodo.Field()
     create_todo = CreateTodo.Field()
 
 
-schema = graphene.Schema(query=Query, mutation=Mutation)
+schema = Schema(query=Query, mutation=Mutation)
